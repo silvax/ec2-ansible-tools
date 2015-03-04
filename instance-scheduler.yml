@@ -1,0 +1,11 @@
+---
+  - hosts: "{{ scheduled_instances }}"
+    gather_facts: false
+    tasks:
+
+      - name: stopping instance
+        local_action:
+          module: ec2
+          state: "{{ instance_state }}"
+          region: "{{ ec2_region }}"
+          instance_ids: "{{ ec2_id }}"

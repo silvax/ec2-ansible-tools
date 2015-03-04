@@ -1,0 +1,34 @@
+---
+# tasks file for instance-scheduler
+- name: Install the latest version of pip Ubuntu
+  apt: name=$item state=latest
+  with_items:
+   - python-pip
+  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+- name: Install the latest version of pip RedHat
+  yum: name=$item state=latest
+  with_items:
+   - python-pip
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'Amazon Linux'
+
+- name: Install Ansible using Pip
+  pip: name=ansible state=latest
+
+- name: Install Crowrap using pip
+  pip: name=cronwrap state=latest
+
+- name: Create the /etc/ansible directory
+  file: name=/etc/ansible state=directory
+
+- name: copy the ec2.ini file
+  copy: src=ec2.ini dest=/etc/ansible/ec2.ini
+
+- name: copy the ec2.py file and rename to hosts to we can use ut dynamically
+  copy: src=ec2.py dest=/etc/ansible/hosts mode=0755
+
+- name: copy the playbook
+  copy: name=instance-scheduler.yml dest=/opt/instance-scheduler.yml
+
+- name: Create the cron entry for the daily job
+  cron: name="Run Instance Scheduler daily at 7 PM" minute="0" hour="19" job="cronwrap -c 'ansible-playbook -e scheduled_instances=tag_schedule_daily /opt/playbooks/instance-scheduler.yml > /var/log/scheduler.log 2>&1"
