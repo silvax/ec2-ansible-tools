@@ -1,0 +1,19 @@
+---
+# This module assumes that the volume to be snapped is /dev/sdb . This could be changed by passing the parameter
+# volume_device_name when the play is executed
+  - hosts: "{{ snap_volumes }}"
+    gather_facts: true
+    tasks:
+
+      - name: creating snapshot for volumes
+        local_action:
+          module: ec2_snapshot
+          region: "{{ ec2_region }}"
+          device_name: "{{ volume_device_name|default('/dev/sdb') }}"
+          instance_id: "{{ ec2_id }}"
+          wait: no
+          snapshot_tags:
+            instance_name: "{{ ec2_tag_Name }}"
+            instance_id: "{{ ec2_id }}"
+            Name: "Automated EBS Backup of volumes attached to {{ ec2_id }}"
+            Date_Time: "{{ ansible_date_time.date}}-{{ ansible_date_time.time}}-{{ ansible_date_time.tz }}"
