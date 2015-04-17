@@ -1,0 +1,95 @@
+{
+  "Description" : "dev-stack.json",
+  "Parameters": {
+    "OWNER" : {
+      "Type" : "String",
+      "Description" : "The email address of the owner of this stack"
+    },
+    "AMI" : {
+      "Type" : "String",
+      "Description" : "The ec2 AMI Id of the instances that will be launched"
+    },
+    "NAME" : {
+      "Type" : "String",
+      "Description" : "Name tag that will be used for the instance"
+    },
+    "IAMROLE" : {
+      "Type" : "String",
+      "Description" : "The IAM Roles that will be used by the ec2 instances"
+    },
+    "DESIREDNUMBER" : {
+      "Type" : "String",
+      "Description" : "The desired number of instances ",
+      "Default" : "2"
+    },
+    "TYPE" : {
+      "Type" : "String",
+      "Description" : "The ec2 instance type that will be used by the instances",
+      "Default": "m3.medium"
+    },
+    "SECURITYGROUP" : {
+      "Type" : "String",
+      "Description" : "The security group that will be used by the instances"
+    },
+    "VPCSUBNETS" : {
+      "Type" : "String",
+      "Description" : "The Subnet IDs of the subnets within the VPC that could be used to launch the instances"
+    },
+    "AZ" : {
+      "Type" : "String",
+      "Description" : "The Availability zone where the instance will be launched. It must match the Subnet"
+    }
+
+  },
+  "Resources": {
+    "InstanceProfile" : {
+      "Type"       : "AWS::IAM::InstanceProfile",
+      "Properties" : {
+        "Path"  : "/",
+        "Roles" : [ { "Ref" : "IAMROLE" } ]
+      }
+    },
+    "DevVolume" : {
+       "Type" : "AWS::EC2::Volume",
+       "Properties" : {
+          "Size" : "20",
+          "AvailabilityZone" : { "Ref" : "AZ" },
+          "Tags" : [ {
+             "Key" : "MyTag",
+             "Value" : "TagValue"
+          } ]
+       },
+       "DeletionPolicy" : "Snapshot"
+    },
+    "LaunchConfig" : {
+      "Type"       : "AWS::AutoScaling::LaunchConfiguration",
+      "Properties" : {
+        "AssociatePublicIpAddress": true,
+        "ImageId"             : { "Ref" : "AMI" },
+        "IamInstanceProfile"  : { "Ref" : "InstanceProfile" },
+        "SecurityGroups"      : [ { "Ref" : "SECURITYGROUP" } ],
+        "KeyName"             : "dev.ops",
+        "InstanceType"        : {"Ref" : "TYPE"},
+        "BlockDeviceMappings" : [ {
+            "DeviceName" : "/dev/sdk",
+            "Ebs" : {"VolumeSize" : "50"}
+         }]
+      }
+    },
+    "ASG" : {
+      "Type"       : "AWS::AutoScaling::AutoScalingGroup",
+      "Properties" : {
+        "VPCZoneIdentifier"       : [{ "Ref" : "VPCSUBNETS" }],
+        "LaunchConfigurationName" : { "Ref" : "LaunchConfig" },
+        "MinSize"                 : { "Ref" : "DESIREDNUMBER" },
+        "DesiredCapacity"         : { "Ref" : "DESIREDNUMBER" },
+        "MaxSize"                 : { "Ref" : "DESIREDNUMBER" },
+        "HealthCheckGracePeriod"  : "900",
+        "Tags"                    : [
+          { "Key": "Owner",        "Value": { "Ref" : "OWNER"},        "PropagateAtLaunch": true },
+          { "Key": "Name",        "Value": { "Ref" : "NAME"},        "PropagateAtLaunch": true }
+        ]
+      }
+    }
+  }
+}
